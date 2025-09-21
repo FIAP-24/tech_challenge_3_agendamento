@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Banco de dados para o serviço de agendamento
+  agendamento-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: agendamento
+      POSTGRES_USER: agendamento
+      POSTGRES_PASSWORD: agendamento123
+    ports:
+      - "5432:5432"
+    volumes:
+      - agendamento_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
+  # Banco de dados para o serviço de histórico
+  historico-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: historico
+      POSTGRES_USER: historico
+      POSTGRES_PASSWORD: historico123
+    ports:
+      - "5433:5432"
+    volumes:
+      - historico_db_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+
+  # RabbitMQ para comunicação assíncrona
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - microservices-network
+
+  # Serviço de Agendamento
+  agendamento-service:
+    build:
+      context: ./agendamento-service
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DATABASE_URL=jdbc:postgresql://agendamento-db:5432/agendamento
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=admin
+      - RABBITMQ_PASSWORD=admin123
+    depends_on:
+      - agendamento-db
+      - rabbitmq
+    networks:
+      - microservices-network
+
+  # Serviço de Notificações
+  notificacao-service:
+    build:
+      context: ./notificacao-service
+      dockerfile: Dockerfile
+    ports:
+      - "9091:9091"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=admin
+      - RABBITMQ_PASSWORD=admin123
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    depends_on:
+      - rabbitmq
+    networks:
+      - microservices-network
+
+  # Serviço de Histórico (Opcional)
+  historico-service:
+    build:
+      context: ./historico-service
+      dockerfile: Dockerfile
+    ports:
+      - "9092:9092"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DATABASE_URL=jdbc:postgresql://historico-db:5432/historico
+    depends_on:
+      - historico-db
+    networks:
+      - microservices-network
+
+volumes:
+  agendamento_db_data:
+  historico_db_data:
+  rabbitmq_data:
+
+networks:
+  microservices-network:
+    driver: bridge
