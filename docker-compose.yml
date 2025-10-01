@@ -80,6 +80,11 @@ services:
       - SMTP_PORT=587
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      # Configurações do serviço de notificação
+      - NOTIFICACAO_MODO=LOG
+      - EMAIL_HABILITADO=true
+      - SMS_HABILITADO=false
+      - SMS_PROVEDOR=TWILIO
     depends_on:
       - rabbitmq
     networks:
