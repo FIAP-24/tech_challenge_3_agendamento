@@ -21,12 +21,18 @@ public class RabbitMQConfig {
 
     @Value("${rabbitmq.queue.name:notificacoes.queue}")
     private String queueName;
-    
+
     @Value("${rabbitmq.exchange.name:notificacoes.exchange}")
     private String exchangeName;
-    
+
     @Value("${rabbitmq.routing.key:notificacao.consulta}")
     private String routingKey;
+
+    @Value("${rabbitmq.queue.name}")
+    private String notificacoesQueueName;
+
+    @Value("${rabbitmq.queue.historico.name}")
+    private String historicoQueueName;
 
     @Bean
     public MessageConverter jsonMessageConverter() {
@@ -38,13 +44,13 @@ public class RabbitMQConfig {
         log.info("Configurando fila de notificacoes: {}", queueName);
         return new Queue(queueName, true); // durable = true
     }
-    
+
     @Bean
     public TopicExchange exchange() {
         log.info("Configurando exchange de notificacoes: {}", exchangeName);
         return new TopicExchange(exchangeName, true, false); // durable = true, autoDelete = false
     }
-    
+
     @Bean
     public Binding binding() {
         log.info("Configurando binding: {} -> {} com routing key: {}", queueName, exchangeName, routingKey);
@@ -52,5 +58,15 @@ public class RabbitMQConfig {
                 .bind(queue())
                 .to(exchange())
                 .with(routingKey);
+    }
+
+    @Bean
+    public Queue notificacoesQueue() {
+        return new Queue(notificacoesQueueName, true);
+    }
+
+    @Bean
+    public Queue historicoQueue() {
+        return new Queue(historicoQueueName, true);
     }
 }
