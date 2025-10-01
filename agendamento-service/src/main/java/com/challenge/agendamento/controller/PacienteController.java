@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,13 +46,15 @@ public class PacienteController {
     }
 
     /**
-     * Busca paciente por ID
-     * TODO: Adicionar lógica de autorização para garantir que um paciente só veja seus próprios dados
+     * Busca paciente por ID, com verificação de autorização.
      */
     @QueryMapping
     @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')")
     public Paciente pacientePorId(@Argument Long id) {
         log.info("Buscando paciente por ID: {}", id);
+
+        verificarAutorizacaoPaciente(id);
+
         return pacienteService.buscarPacientePorId(id)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente não encontrado: " + id));
     }
@@ -125,5 +130,33 @@ public class PacienteController {
         log.info("Ativando paciente ID: {}", id);
         pacienteService.ativarPaciente(id);
         return true;
+    }
+
+    /**
+     * Verifica se o usuário autenticado tem permissão para acessar os dados do paciente.
+     * Se o usuário for um paciente, ele só pode acessar seus próprios dados.
+     *
+     * @param pacienteId O ID do paciente a ser acessado.
+     * @throws AccessDeniedException se o acesso for negado.
+     */
+    private void verificarAutorizacaoPaciente(Long pacienteId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isPaciente = authentication.getAuthorities().stream()
+                .anyMatch(role -> role.getAuthority().equals("ROLE_PACIENTE"));
+
+        if (isPaciente) {
+            Long authenticatedPacienteId;
+            try {
+                authenticatedPacienteId = Long.valueOf(authentication.getName());
+            } catch (NumberFormatException e) {
+
+                throw new AccessDeniedException("Acesso negado: ID de paciente inválido.");
+            }
+
+            if (!authenticatedPacienteId.equals(pacienteId)) {
+                throw new AccessDeniedException("Acesso negado: Pacientes só podem acessar seus próprios dados.");
+            }
+        }
     }
 }

@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +33,10 @@ public class ConsultaController {
     @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')") // Acesso controlado [cite: 16, 17, 18]
     public List<Consulta> consultasPorPaciente(@Argument Long pacienteId) {
         log.info("Buscando consultas para paciente ID: {}", pacienteId);
-        // Adicionar lógica de autorização para garantir que um paciente só veja suas consultas
+
+        // Lógica de autorização para garantir que um paciente só veja suas consultas
+        verificarAutorizacaoPaciente(pacienteId);
+
         return consultaService.findConsultasByPacienteId(pacienteId);
     }
 
@@ -38,6 +44,10 @@ public class ConsultaController {
     @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')")
     public List<Consulta> proximasConsultas(@Argument Long pacienteId) {
         log.info("Buscando próximas consultas para paciente ID: {}", pacienteId);
+
+        // Lógica de autorização
+        verificarAutorizacaoPaciente(pacienteId);
+
         return consultaService.findProximasConsultasByPacienteId(pacienteId);
     }
 
@@ -45,8 +55,13 @@ public class ConsultaController {
     @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')")
     public Consulta consultaPorId(@Argument Long id) {
         log.info("Buscando consulta por ID: {}", id);
-        return consultaService.findById(id)
+        Consulta consulta = consultaService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
+
+        // Lógica de autorização
+        verificarAutorizacaoPaciente(consulta.getPacienteId());
+
+        return consulta;
     }
 
     // Métodos de Mutation (escrita)
@@ -73,5 +88,31 @@ public class ConsultaController {
                 .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
     }
 
+    /**
+     * Verifica se o usuário autenticado tem permissão para acessar os dados do paciente.
+     * Se o usuário for um paciente, ele só pode acessar seus próprios dados.
+     *
+     * @param pacienteId O ID do paciente a ser acessado.
+     * @throws AccessDeniedException se o acesso for negado.
+     */
+    private void verificarAutorizacaoPaciente(Long pacienteId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        boolean isPaciente = authentication.getAuthorities().stream()
+                .anyMatch(role -> role.getAuthority().equals("ROLE_PACIENTE"));
+
+        if (isPaciente) {
+
+            Long authenticatedPacienteId;
+            try {
+                authenticatedPacienteId = Long.valueOf(authentication.getName());
+            } catch (NumberFormatException e) {
+                throw new AccessDeniedException("Acesso negado: ID de paciente inválido.");
+            }
+
+            if (!authenticatedPacienteId.equals(pacienteId)) {
+                throw new AccessDeniedException("Acesso negado: Pacientes só podem acessar seus próprios dados.");
+            }
+        }
+    }
 }
