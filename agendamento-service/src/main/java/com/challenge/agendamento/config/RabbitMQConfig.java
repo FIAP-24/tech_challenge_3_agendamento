@@ -28,7 +28,7 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing.key:notificacao.consulta}")
     private String routingKey;
 
-    @Value("${rabbitmq.queue.name}")
+    @Value("${rabbitmq.queue.notificacoes.name}")
     private String notificacoesQueueName;
 
     @Value("${rabbitmq.queue.historico.name}")
@@ -60,13 +60,35 @@ public class RabbitMQConfig {
                 .with(routingKey);
     }
 
+    // --- Beans para Notificações ---
     @Bean
     public Queue notificacoesQueue() {
         return new Queue(notificacoesQueueName, true);
     }
 
     @Bean
+    public TopicExchange notificacoesExchange() {
+        return new TopicExchange("notificacoes.exchange");
+    }
+
+    @Bean
+    public Binding notificacoesBinding(Queue notificacoesQueue, TopicExchange notificacoesExchange) {
+        return BindingBuilder.bind(notificacoesQueue).to(notificacoesExchange).with("notificacao.#");
+    }
+
+    // --- Beans para Histórico ---
+    @Bean
     public Queue historicoQueue() {
         return new Queue(historicoQueueName, true);
+    }
+
+    @Bean
+    public TopicExchange historicoExchange() {
+        return new TopicExchange("historico.exchange");
+    }
+
+    @Bean
+    public Binding historicoBinding(Queue historicoQueue, TopicExchange historicoExchange) {
+        return BindingBuilder.bind(historicoQueue).to(historicoExchange).with("historico.#");
     }
 }
