@@ -22,13 +22,13 @@ public class ConsultaService {
 
     @Autowired
     private ConsultaRepository consultaRepository;
-    
+
     @Autowired(required = false)
     private RabbitTemplate rabbitTemplate;
-    
+
     @Autowired(required = false)
     private Queue queue;
-    
+
     @Autowired
     private PacienteService pacienteService;
 
@@ -36,18 +36,17 @@ public class ConsultaService {
     public Consulta registrarConsulta(Consulta consulta) {
         log.info("Registrando nova consulta para paciente ID: {}", consulta.getPacienteId());
 
-        // Validar se paciente existe e está ativo
         if (!pacienteService.pacienteExisteEAtivo(consulta.getPacienteId())) {
             throw new IllegalArgumentException("Paciente não encontrado ou inativo: " + consulta.getPacienteId());
         }
 
-        // Validar se data é futura
         if (consulta.getDataHora().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Data da consulta deve ser futura");
         }
 
         Consulta savedConsulta = consultaRepository.save(consulta);
         enviarNotificacao("Consulta agendada com sucesso!", savedConsulta);
+        enviarParaHistorico("REGISTRO_CONSULTA", savedConsulta);
 
         log.info("Consulta registrada com sucesso. ID: {}", savedConsulta.getId());
         return savedConsulta;
@@ -60,6 +59,7 @@ public class ConsultaService {
             consultaExistente.setDescricao(consultaAtualizada.getDescricao());
             Consulta savedConsulta = consultaRepository.save(consultaExistente);
             enviarNotificacao("Sua consulta foi remarcada.", savedConsulta);
+            enviarParaHistorico("EDICAO_CONSULTA", savedConsulta);
             return savedConsulta;
         });
     }
@@ -89,4 +89,20 @@ public class ConsultaService {
             log.warn("RabbitMQ não configurado - notificação não enviada para paciente ID: {}", consulta.getPacienteId());
         }
     }
+
+    private void enviarParaHistorico(String acao, Consulta consulta) {
+        if (rabbitTemplate != null) {
+            String mensagem = String.format("Ação [%s] executada para a consulta. Descrição: %s", acao, consulta.getDescricao());
+            NotificacaoDTO historicoDto = new NotificacaoDTO(
+                    consulta.getId(),
+                    consulta.getPacienteId(),
+                    mensagem
+            );
+            rabbitTemplate.convertAndSend("historico.exchange", "historico.consulta.registrada", historicoDto);
+            log.info("Mensagem de histórico enviada para consulta ID: {}", consulta.getId());
+        } else {
+            log.warn("RabbitMQ não configurado - histórico não enviado.");
+        }
+    }
+
 }

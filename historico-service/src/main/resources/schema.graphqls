@@ -1,0 +1,11 @@
+type Query {
+    historicoPorPaciente(pacienteId: ID!): [HistoricoConsulta]
+}
+
+type HistoricoConsulta {
+    id: ID
+    consultaId: ID
+    pacienteId: ID
+    evento: String
+    timestamp: String
+}
