@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "fiap-24-tech-challenge-3",
 		"name": "FIAP 24 - Tech Challenge 3",
-		"description": "Collection para testar o sistema de agendamento médico com segurança implementada. Inclui testes para Agendamento, Histórico e diferentes tipos de usuários (Médico, Enfermeiro, Paciente).",
+		"description": "Collection para testar o sistema de agendamento médico com segurança implementada. Inclui testes para Agendamento, Médicos, Histórico e diferentes tipos de usuários (Médico, Enfermeiro, Paciente). Funcionalidades: CRUD de Médicos, Cancelamento de Consultas, Consultas por Médico, Validação de Conflitos.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -469,6 +469,427 @@
 							]
 						},
 						"description": "Edita uma consulta existente"
+					}
+				},
+				{
+					"name": "Cancelar Consulta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { cancelarConsulta(id: 1) }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Cancela uma consulta futura"
+					}
+				},
+				{
+					"name": "Buscar Consultas por Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { consultasPorMedico(medicoId: 1) { id pacienteId medicoId dataHora descricao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca todas as consultas de um médico específico"
+					}
+				},
+				{
+					"name": "Buscar Próximas Consultas do Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { proximasConsultasMedico(medicoId: 1) { id pacienteId medicoId dataHora descricao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca apenas as consultas futuras de um médico"
+					}
+				},
+				{
+					"name": "Buscar Consultas do Médico por Período",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { consultasMedicoPorPeriodo(medicoId: 1, dataInicio: \\\"2025-01-01T00:00\\\", dataFim: \\\"2025-12-31T23:59\\\") { id pacienteId medicoId dataHora descricao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca consultas de um médico em um período específico"
+					}
+				}
+			]
+		},
+		{
+			"name": "Médicos",
+			"item": [
+				{
+					"name": "Listar Todos os Médicos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicos { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Lista todos os médicos cadastrados no sistema"
+					}
+				},
+				{
+					"name": "Listar Médicos Ativos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicosAtivos { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Lista apenas os médicos ativos no sistema"
+					}
+				},
+				{
+					"name": "Buscar Médico por ID",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicoPorId(id: 1) { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca um médico específico por ID"
+					}
+				},
+				{
+					"name": "Buscar Médico por CRM",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicoPorCrm(crm: \\\"12345\\\") { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca um médico específico por CRM"
+					}
+				},
+				{
+					"name": "Buscar Médicos por Especialidade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicosPorEspecialidade(especialidade: \\\"Cardiologia\\\") { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca médicos por especialidade"
+					}
+				},
+				{
+					"name": "Buscar Médicos Ativos por Especialidade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicosAtivosPorEspecialidade(especialidade: \\\"Cardiologia\\\") { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca médicos ativos por especialidade"
+					}
+				},
+				{
+					"name": "Buscar Médicos por Nome",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicosPorNome(nome: \\\"João\\\") { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca médicos por nome (busca parcial, case insensitive)"
+					}
+				},
+				{
+					"name": "Buscar Médicos Ativos por Nome",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { medicosAtivosPorNome(nome: \\\"João\\\") { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca médicos ativos por nome"
+					}
+				},
+				{
+					"name": "Criar Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { criarMedico(input: { nome: \\\"Dr. Pedro Santos\\\", crm: \\\"54321\\\", especialidade: \\\"Ortopedia\\\", email: \\\"pedro@clinica.com\\\", telefone: \\\"(11) 77777-7777\\\", ativo: true }) { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Cria um novo médico no sistema"
+					}
+				},
+				{
+					"name": "Editar Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { editarMedico(id: 1, input: { nome: \\\"Dr. João Silva Santos\\\", email: \\\"joao.santos@clinica.com\\\", telefone: \\\"(11) 66666-6666\\\" }) { id nome crm especialidade email telefone ativo dataCriacao dataAtualizacao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Edita um médico existente"
+					}
+				},
+				{
+					"name": "Desativar Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { desativarMedico(id: 1) }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Desativa um médico (soft delete)"
+					}
+				},
+				{
+					"name": "Ativar Médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { ativarMedico(id: 1) }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Ativa um médico previamente desativado"
 					}
 				}
 			]

@@ -1,7 +1,9 @@
 package com.challenge.agendamento.config;
 
+import com.challenge.agendamento.model.Medico;
 import com.challenge.agendamento.model.Paciente;
 import com.challenge.agendamento.model.Usuario;
+import com.challenge.agendamento.repository.MedicoRepository;
 import com.challenge.agendamento.repository.PacienteRepository;
 import com.challenge.agendamento.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,9 @@ public class DataInitializer implements CommandLineRunner {
     
     @Autowired
     private PacienteRepository pacienteRepository;
+    
+    @Autowired
+    private MedicoRepository medicoRepository;
     
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -62,6 +67,34 @@ public class DataInitializer implements CommandLineRunner {
                 System.out.println("Paciente de teste criado com sucesso!");
             } catch (Exception e) {
                 System.out.println("Paciente de teste já existe ou erro ao criar: " + e.getMessage());
+            }
+        }
+
+        if (medicoRepository.count() == 0) {
+            try {
+                Medico medicoTeste = new Medico();
+                medicoTeste.setNome("Dr. João Silva");
+                medicoTeste.setCrm("12345");
+                medicoTeste.setEspecialidade("Cardiologia");
+                medicoTeste.setEmail("joao.silva@clinica.com");
+                medicoTeste.setTelefone("(11) 99999-9999");
+                medicoTeste.setAtivo(true);
+                medicoTeste.setDataCriacao(LocalDateTime.now());
+                medicoRepository.save(medicoTeste);
+
+                Medico medicoTeste2 = new Medico();
+                medicoTeste2.setNome("Dra. Maria Santos");
+                medicoTeste2.setCrm("67890");
+                medicoTeste2.setEspecialidade("Pediatria");
+                medicoTeste2.setEmail("maria.santos@clinica.com");
+                medicoTeste2.setTelefone("(11) 88888-8888");
+                medicoTeste2.setAtivo(true);
+                medicoTeste2.setDataCriacao(LocalDateTime.now());
+                medicoRepository.save(medicoTeste2);
+
+                System.out.println("Médicos de teste criados com sucesso!");
+            } catch (Exception e) {
+                System.out.println("Médicos de teste já existem ou erro ao criar: " + e.getMessage());
             }
         }
     }

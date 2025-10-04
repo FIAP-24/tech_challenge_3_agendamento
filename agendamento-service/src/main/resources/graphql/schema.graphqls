@@ -3,6 +3,9 @@ type Query {
     consultasPorPaciente(pacienteId: ID!): [Consulta]
     proximasConsultas(pacienteId: ID!): [Consulta]
     consultaPorId(id: ID!): Consulta
+    consultasPorMedico(medicoId: ID!): [Consulta]
+    proximasConsultasMedico(medicoId: ID!): [Consulta]
+    consultasMedicoPorPeriodo(medicoId: ID!, dataInicio: String!, dataFim: String!): [Consulta]
     
     # Pacientes
     pacientes: [Paciente]
@@ -11,18 +14,35 @@ type Query {
     pacientePorCpf(cpf: String!): Paciente
     pacientesPorNome(nome: String!): [Paciente]
     pacientesPorCidade(cidade: String!): [Paciente]
+    
+    # Médicos
+    medicos: [Medico]
+    medicosAtivos: [Medico]
+    medicoPorId(id: ID!): Medico
+    medicoPorCrm(crm: String!): Medico
+    medicosPorEspecialidade(especialidade: String!): [Medico]
+    medicosAtivosPorEspecialidade(especialidade: String!): [Medico]
+    medicosPorNome(nome: String!): [Medico]
+    medicosAtivosPorNome(nome: String!): [Medico]
 }
 
 type Mutation {
     # Consultas
     registrarConsulta(input: ConsultaInput!): Consulta
     editarConsulta(id: ID!, input: ConsultaInput!): Consulta
+    cancelarConsulta(id: ID!): Boolean
     
     # Pacientes
     criarPaciente(input: PacienteInput!): Paciente
     editarPaciente(id: ID!, input: PacienteInput!): Paciente
     desativarPaciente(id: ID!): Boolean
     ativarPaciente(id: ID!): Boolean
+    
+    # Médicos
+    criarMedico(input: MedicoInput!): Medico
+    editarMedico(id: ID!, input: MedicoInput!): Medico
+    desativarMedico(id: ID!): Boolean
+    ativarMedico(id: ID!): Boolean
 }
 
 type Consulta {
@@ -49,6 +69,18 @@ type Paciente {
     dataAtualizacao: String
 }
 
+type Medico {
+    id: ID
+    nome: String
+    crm: String
+    especialidade: String
+    email: String
+    telefone: String
+    ativo: Boolean
+    dataCriacao: String
+    dataAtualizacao: String
+}
+
 input ConsultaInput {
     pacienteId: ID!
     medicoId: ID!
@@ -66,5 +98,14 @@ input PacienteInput {
     cidade: String
     estado: String
     cep: String
+    ativo: Boolean
+}
+
+input MedicoInput {
+    nome: String!
+    crm: String!
+    especialidade: String!
+    email: String
+    telefone: String
     ativo: Boolean
 }
