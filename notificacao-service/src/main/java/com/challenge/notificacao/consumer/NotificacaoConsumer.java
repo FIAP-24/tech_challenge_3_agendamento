@@ -25,26 +25,21 @@ public class NotificacaoConsumer {
     @RabbitListener(queues = "${rabbitmq.queue.name:notificacoes.queue}")
     public void processarNotificacao(NotificacaoDTO notificacao) {
         try {
-            log.info("📨 Nova mensagem recebida da fila: {}", notificacao);
+            log.info("Nova mensagem recebida da fila: {}", notificacao);
             
-            // Validar dados da notificacao
             if (validarNotificacao(notificacao)) {
                 notificacaoService.processarNotificacao(notificacao);
-                log.info("✅ Notificacao processada com sucesso para paciente ID: {}", 
+                log.info("Notificacao processada com sucesso para paciente ID: {}", 
                         notificacao.getPacienteId());
             } else {
-                log.error("❌ Notificacao invalida recebida: {}", notificacao);
+                log.error("Notificacao invalida recebida: {}", notificacao);
             }
             
         } catch (Exception e) {
-            log.error("❌ Erro ao processar notificacao: {}", e.getMessage(), e);
-            // Em uma implementacao real, aqui poderia implementar retry logic ou DLQ
+            log.error("Erro ao processar notificacao: {}", e.getMessage(), e);
         }
     }
     
-    /**
-     * Valida se a notificacao contem os dados necessarios
-     */
     private boolean validarNotificacao(NotificacaoDTO notificacao) {
         if (notificacao == null) {
             log.error("Notificacao e nula");

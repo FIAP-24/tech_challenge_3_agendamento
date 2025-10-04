@@ -20,11 +20,16 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/graphql", "/graphiql/**", "/h2-console/**").permitAll()
+                        .requestMatchers("/graphiql/**", "/h2-console/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/api/test/**").authenticated()
+                        .requestMatchers("/graphql").authenticated()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(withDefaults());
+        
         http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        
         return http.build();
     }
 
@@ -32,7 +37,4 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    // O MÉTODO userDetailsService() FOI REMOVIDO DAQUI
-    // O Spring usará o CustomUserDetailsService automaticamente
 }

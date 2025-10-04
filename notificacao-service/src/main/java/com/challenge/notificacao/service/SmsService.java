@@ -22,13 +22,12 @@ public class SmsService {
      * Envia SMS para um paciente (apenas log)
      */
     public void enviarSms(Long pacienteId, String mensagem) {
-        log.info("📱 === ENVIO DE SMS (LOG) ===");
-        log.info("📱 Paciente ID: {}", pacienteId);
-        log.info("📱 Mensagem: {}", mensagem);
-        log.info("📱 Provedor configurado: {}", properties.getSms().getProvedor());
-        log.info("📱 ===========================");
+        log.info("=== ENVIO DE SMS (LOG) ===");
+        log.info("Paciente ID: {}", pacienteId);
+        log.info("Mensagem: {}", mensagem);
+        log.info("Provedor configurado: {}", properties.getSms().getProvedor());
+        log.info("===========================");
         
-        // Simulacao de envio
         simularEnvioSms(pacienteId, mensagem);
     }
     
@@ -38,11 +37,11 @@ public class SmsService {
     private void simularEnvioSms(Long pacienteId, String mensagem) {
         String provedor = properties.getSms().getProvedor();
         
-        log.info("📱 [SIMULACAO] Enviando SMS para paciente ID: {}", pacienteId);
-        log.info("📱 [SIMULACAO] Provedor: {}", provedor);
-        log.info("📱 [SIMULACAO] Mensagem: {}", mensagem);
-        log.info("📱 [SIMULACAO] Status: SIMULADO (nao enviado realmente)");
-        log.info("📱 [SIMULACAO] Para implementar SMS real, configure um provedor SMS");
+        log.info("[SIMULACAO] Enviando SMS para paciente ID: {}", pacienteId);
+        log.info("[SIMULACAO] Provedor: {}", provedor);
+        log.info("[SIMULACAO] Mensagem: {}", mensagem);
+        log.info("[SIMULACAO] Status: SIMULADO (nao enviado realmente)");
+        log.info("[SIMULACAO] Para implementar SMS real, configure um provedor SMS");
     }
     
     /**

@@ -22,18 +22,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 1. Busca o usuário no banco de dados
         Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("Usuário não encontrado com o nome: " + username));
-
-        // 2. Converte os perfis (roles) para o formato que o Spring Security espera
-        Set<GrantedAuthority> authorities = usuario
-                .getRoles()
-                .stream()
-                .map((role) -> new SimpleGrantedAuthority("ROLE_" + role)) // Adiciona o prefixo ROLE_
-                .collect(Collectors.toSet());
-
+            .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
+        
+        Set<GrantedAuthority> authorities = usuario.getRoles().stream()
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+            .collect(Collectors.toSet());
+        
         return new User(usuario.getUsername(), usuario.getPassword(), authorities);
     }
 }

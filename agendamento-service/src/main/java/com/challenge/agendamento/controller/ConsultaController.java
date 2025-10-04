@@ -28,13 +28,11 @@ public class ConsultaController {
     private ConsultaService consultaService;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    // Métodos de Query (leitura)
     @QueryMapping
-    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')") // Acesso controlado [cite: 16, 17, 18]
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')")
     public List<Consulta> consultasPorPaciente(@Argument Long pacienteId) {
         log.info("Buscando consultas para paciente ID: {}", pacienteId);
 
-        // Lógica de autorização para garantir que um paciente só veja suas consultas
         verificarAutorizacaoPaciente(pacienteId);
 
         return consultaService.findConsultasByPacienteId(pacienteId);
@@ -45,7 +43,6 @@ public class ConsultaController {
     public List<Consulta> proximasConsultas(@Argument Long pacienteId) {
         log.info("Buscando próximas consultas para paciente ID: {}", pacienteId);
 
-        // Lógica de autorização
         verificarAutorizacaoPaciente(pacienteId);
 
         return consultaService.findProximasConsultasByPacienteId(pacienteId);
@@ -58,15 +55,13 @@ public class ConsultaController {
         Consulta consulta = consultaService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
 
-        // Lógica de autorização
         verificarAutorizacaoPaciente(consulta.getPacienteId());
 
         return consulta;
     }
 
-    // Métodos de Mutation (escrita)
     @MutationMapping
-    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')") // Apenas médicos e enfermeiros podem registrar [cite: 21]
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
     public Consulta registrarConsulta(@Argument ConsultaInput input) {
         log.info("Registrando nova consulta para paciente ID: {}", input.pacienteId());
         Consulta consulta = new Consulta();

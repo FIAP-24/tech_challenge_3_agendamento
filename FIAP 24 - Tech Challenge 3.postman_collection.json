@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "fiap-24-tech-challenge-3",
 		"name": "FIAP 24 - Tech Challenge 3",
-		"description": "Collection para testar o CRUD de Pacientes e Consultas do sistema de agendamento médico",
+		"description": "Collection para testar o sistema de agendamento médico com segurança implementada. Inclui testes para Agendamento, Histórico e diferentes tipos de usuários (Médico, Enfermeiro, Paciente).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -12,13 +12,48 @@
 			"type": "string"
 		},
 		{
+			"key": "historico_url",
+			"value": "http://localhost:9092",
+			"type": "string"
+		},
+		{
 			"key": "username",
-			"value": "medico",
+			"value": "medico1",
 			"type": "string"
 		},
 		{
 			"key": "password",
-			"value": "password",
+			"value": "password123",
+			"type": "string"
+		},
+		{
+			"key": "medico_username",
+			"value": "medico1",
+			"type": "string"
+		},
+		{
+			"key": "enfermeiro_username",
+			"value": "enfermeiro1",
+			"type": "string"
+		},
+		{
+			"key": "paciente_username",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "medico_password",
+			"value": "password123",
+			"type": "string"
+		},
+		{
+			"key": "enfermeiro_password",
+			"value": "password123",
+			"type": "string"
+		},
+		{
+			"key": "paciente_password",
+			"value": "password123",
 			"type": "string"
 		}
 	],
@@ -439,6 +474,554 @@
 			]
 		},
 		{
+			"name": "Histórico",
+			"item": [
+				{
+					"name": "Buscar Histórico por Paciente (Médico/Enfermeiro)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{medico_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{medico_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { historicoPorPaciente(pacienteId: 1) { id consultaId pacienteId evento timestamp } }\"\n}"
+						},
+						"url": {
+							"raw": "{{historico_url}}/graphql",
+							"host": [
+								"{{historico_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Busca o histórico de consultas de um paciente (acesso permitido para médicos e enfermeiros)"
+					}
+				},
+				{
+					"name": "Buscar Próprio Histórico (Paciente)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{paciente_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{paciente_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { historicoPorPaciente(pacienteId: 1) { id consultaId pacienteId evento timestamp } }\"\n}"
+						},
+						"url": {
+							"raw": "{{historico_url}}/graphql",
+							"host": [
+								"{{historico_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Paciente busca seu próprio histórico (deve funcionar)"
+					}
+				},
+				{
+					"name": "Tentar Acessar Histórico de Outro Paciente (Paciente) - DEVE FALHAR",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{paciente_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{paciente_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { historicoPorPaciente(pacienteId: 2) { id consultaId pacienteId evento timestamp } }\"\n}"
+						},
+						"url": {
+							"raw": "{{historico_url}}/graphql",
+							"host": [
+								"{{historico_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Paciente tenta acessar histórico de outro paciente (deve retornar 403 Forbidden)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Testes de Segurança",
+			"item": [
+				{
+					"name": "Teste sem Autenticação - DEVE FALHAR",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { pacientes { id nome } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Tenta acessar sem autenticação (deve retornar 401 Unauthorized)"
+					}
+				},
+				{
+					"name": "Paciente tenta Listar Todos os Pacientes - DEVE FALHAR",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{paciente_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{paciente_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { pacientes { id nome } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Paciente tenta listar todos os pacientes (deve retornar 403 Forbidden)"
+					}
+				},
+				{
+					"name": "Paciente tenta Registrar Consulta - DEVE FALHAR",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{paciente_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{paciente_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: \\\"2024-12-25T10:00:00\\\", descricao: \\\"Consulta de rotina\\\" }) { id } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Paciente tenta registrar uma consulta (deve retornar 403 Forbidden)"
+					}
+				},
+				{
+					"name": "Paciente tenta Ver Consultas de Outro Paciente - DEVE FALHAR",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{paciente_username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{paciente_password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"query { consultasPorPaciente(pacienteId: 2) { id descricao } }\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/graphql",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"graphql"
+							]
+						},
+						"description": "Paciente tenta ver consultas de outro paciente (deve retornar 403 Forbidden)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Testes por Tipo de Usuário",
+			"item": [
+				{
+					"name": "Médico - Acesso Total",
+					"item": [
+						{
+							"name": "Médico - Listar Pacientes",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{medico_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{medico_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"query { pacientes { id nome cpf } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Médico lista todos os pacientes (deve funcionar)"
+							}
+						},
+						{
+							"name": "Médico - Registrar Consulta",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{medico_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{medico_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: \\\"2024-12-25T10:00:00\\\", descricao: \\\"Consulta de rotina - Médico\\\" }) { id descricao } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Médico registra uma consulta (deve funcionar)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Enfermeiro - Acesso Similar ao Médico",
+					"item": [
+						{
+							"name": "Enfermeiro - Listar Pacientes",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{enfermeiro_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{enfermeiro_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"query { pacientes { id nome cpf } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Enfermeiro lista todos os pacientes (deve funcionar)"
+							}
+						},
+						{
+							"name": "Enfermeiro - Registrar Consulta",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{enfermeiro_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{enfermeiro_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: \\\"2024-12-26T14:00:00\\\", descricao: \\\"Consulta de rotina - Enfermeiro\\\" }) { id descricao } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Enfermeiro registra uma consulta (deve funcionar)"
+							}
+						}
+					]
+				},
+				{
+					"name": "Paciente - Acesso Restrito",
+					"item": [
+						{
+							"name": "Paciente - Ver Próprias Consultas",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{paciente_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{paciente_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"query { consultasPorPaciente(pacienteId: 1) { id descricao dataHora } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Paciente vê suas próprias consultas (deve funcionar)"
+							}
+						},
+						{
+							"name": "Paciente - Ver Próprios Dados",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"auth": {
+									"type": "basic",
+									"basic": [
+										{
+											"key": "username",
+											"value": "{{paciente_username}}",
+											"type": "string"
+										},
+										{
+											"key": "password",
+											"value": "{{paciente_password}}",
+											"type": "string"
+										}
+									]
+								},
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"query\": \"query { pacientePorId(id: 1) { id nome cpf email } }\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/graphql",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"graphql"
+									]
+								},
+								"description": "Paciente vê seus próprios dados (deve funcionar)"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "Health Check",
 			"request": {
 				"method": "GET",
@@ -471,23 +1054,6 @@
 					]
 				},
 				"description": "Acessa o console do banco de dados H2"
-			}
-		},
-		{
-			"name": "GraphiQL Playground",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{base_url}}/graphiql",
-					"host": [
-						"{{base_url}}"
-					],
-					"path": [
-						"graphiql"
-					]
-				},
-				"description": "Acessa o playground GraphQL para testes interativos"
 			}
 		}
 	]
