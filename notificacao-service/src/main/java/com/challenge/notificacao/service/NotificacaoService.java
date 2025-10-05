@@ -54,9 +54,6 @@ public class NotificacaoService {
         }
     }
     
-    /**
-     * Processa notificacao apenas com log
-     */
     private void processarLog(NotificacaoDTO notificacao) {
         log.info("=== NOTIFICACAO DE CONSULTA ===");
         log.info("Consulta ID: {}", notificacao.getConsultaId());
@@ -66,10 +63,9 @@ public class NotificacaoService {
         log.info("Timestamp: {}", notificacao.getTimestamp());
         log.info("===============================");
         
-        // Log adicional para simular envio
-        log.info("📧 SIMULACAO: Email enviado para paciente ID {} - Assunto: {}", 
+        log.info("SIMULACAO: Email enviado para paciente ID {} - Assunto: {}", 
                 notificacao.getPacienteId(), properties.getEmail().getAssuntoPadrao());
-        log.info("📱 SIMULACAO: SMS enviado para paciente ID {} - Provedor: {}", 
+        log.info("SIMULACAO: SMS enviado para paciente ID {} - Provedor: {}", 
                 notificacao.getPacienteId(), properties.getSms().getProvedor());
     }
     
@@ -77,7 +73,7 @@ public class NotificacaoService {
      * Processa notificacao por email
      */
     private void processarEmail(NotificacaoDTO notificacao) {
-        log.info("📧 Processando notificacao por EMAIL para paciente ID: {}", notificacao.getPacienteId());
+        log.info("Processando notificacao por EMAIL para paciente ID: {}", notificacao.getPacienteId());
         emailService.enviarEmail(notificacao.getPacienteId(), notificacao.getMensagem());
     }
     
@@ -85,7 +81,7 @@ public class NotificacaoService {
      * Processa notificacao por SMS (apenas log)
      */
     private void processarSms(NotificacaoDTO notificacao) {
-        log.info("📱 Processando notificacao por SMS para paciente ID: {}", notificacao.getPacienteId());
+        log.info("Processando notificacao por SMS para paciente ID: {}", notificacao.getPacienteId());
         smsService.enviarSms(notificacao.getPacienteId(), notificacao.getMensagem());
     }
     
@@ -96,12 +92,11 @@ public class NotificacaoService {
         boolean configOk = true;
         
         if (properties.getModo() == NotificacaoProperties.ModoNotificacao.EMAIL && !emailService.isDisponivel()) {
-            log.warn("⚠️ Modo EMAIL configurado mas EmailService nao disponivel");
+            log.warn("Modo EMAIL configurado mas EmailService nao disponivel");
             configOk = false;
         }
         
-        // SMS sempre esta disponivel (apenas log)
-        log.info("✅ Servico de notificacao configurado - Modo: {}", properties.getModo());
+        log.info("Servico de notificacao configurado - Modo: {}", properties.getModo());
         
         return configOk;
     }

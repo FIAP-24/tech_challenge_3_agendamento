@@ -1,6 +1,6 @@
 # 🏥 Sistema de Agendamento de Consultas Médicas
 
-Sistema de microserviços para agendamento de consultas médicas com notificações automáticas via RabbitMQ.
+Sistema de microserviços para agendamento de consultas médicas com notificações automáticas via RabbitMQ, **segurança implementada** com controle de acesso baseado em roles e comunicação assíncrona.
 
 ## 🏗️ Arquitetura
 
@@ -26,11 +26,12 @@ Sistema de microserviços para agendamento de consultas médicas com notificaç�
 
 ## 🚀 Serviços
 
-### 1. Agendamento Service (Porta 9090)
-- **Funcionalidades**: CRUD de pacientes e consultas
-- **API REST**: Endpoints para gerenciamento
-- **Banco**: PostgreSQL
+### 1. Agendamento Service (Porta 8080)
+- **Funcionalidades**: CRUD de pacientes e consultas via GraphQL
+- **Segurança**: Autenticação HTTP Basic + controle de acesso por roles
+- **Banco**: H2 em memória (desenvolvimento)
 - **Integração**: Envia notificações via RabbitMQ
+- **Usuários**: Médicos, Enfermeiros, Pacientes
 
 ### 2. Notificação Service (Porta 9091)
 - **Funcionalidades**: Processamento de notificações
@@ -39,14 +40,17 @@ Sistema de microserviços para agendamento de consultas médicas com notificaç�
 - **Integração**: Consome mensagens da fila
 
 ### 3. Histórico Service (Porta 9092)
-- **Funcionalidades**: Logs e auditoria
-- **Banco**: PostgreSQL
-- **Status**: Em desenvolvimento
+- **Funcionalidades**: Logs e auditoria via GraphQL
+- **Segurança**: Autenticação HTTP Basic + controle de acesso por roles
+- **Banco**: H2 em memória (desenvolvimento)
+- **Status**: ✅ Implementado e funcionando
 
 ## 🛠️ Tecnologias
 
 - **Backend**: Java 21, Spring Boot 3.5.6
-- **Banco de Dados**: PostgreSQL 15
+- **API**: GraphQL com Spring GraphQL
+- **Segurança**: Spring Security com HTTP Basic Auth
+- **Banco de Dados**: H2 (desenvolvimento), PostgreSQL (produção)
 - **Message Broker**: RabbitMQ 3-management
 - **Containerização**: Docker & Docker Compose
 - **Build**: Maven
@@ -109,33 +113,99 @@ SMTP_PASSWORD=sua_senha_app
 
 ### Portas dos Serviços
 
-- **Agendamento Service**: http://localhost:9090
+- **Agendamento Service**: http://localhost:8080
 - **Notificação Service**: http://localhost:9091
 - **Histórico Service**: http://localhost:9092
 - **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
 - **PostgreSQL Agendamento**: localhost:5432
 - **PostgreSQL Histórico**: localhost:5433
 
+## 🔐 Segurança e Usuários
+
+### Usuários de Teste
+
+Todos os usuários usam a senha: `password123`
+
+| Username | Password | Role | Descrição |
+|----------|----------|------|-----------|
+| `medico1` | `password123` | MEDICO | Acesso total - pode visualizar/editar histórico de qualquer paciente |
+| `enfermeiro1` | `password123` | ENFERMEIRO | Pode registrar consultas e acessar histórico |
+| `1` | `password123` | PACIENTE | Pode visualizar apenas suas próprias consultas (ID = 1) |
+
+### Regras de Acesso
+
+#### **Médicos (ROLE_MEDICO)**
+- ✅ Podem visualizar **todos** os pacientes
+- ✅ Podem visualizar **todas** as consultas
+- ✅ Podem **registrar** novas consultas
+- ✅ Podem **editar** consultas existentes
+- ✅ Podem visualizar **todo** o histórico de qualquer paciente
+- ✅ Podem **criar**, **editar**, **ativar** e **desativar** pacientes
+
+#### **Enfermeiros (ROLE_ENFERMEIRO)**
+- ✅ Podem visualizar **todos** os pacientes
+- ✅ Podem visualizar **todas** as consultas
+- ✅ Podem **registrar** novas consultas
+- ✅ Podem **editar** consultas existentes
+- ✅ Podem visualizar **todo** o histórico de qualquer paciente
+- ✅ Podem **criar**, **editar**, **ativar** e **desativar** pacientes
+
+#### **Pacientes (ROLE_PACIENTE)**
+- ✅ Podem visualizar **apenas suas** consultas
+- ❌ NÃO podem visualizar consultas de outros pacientes
+- ❌ NÃO podem registrar ou editar consultas
+- ✅ Podem visualizar **apenas seu** histórico
+- ❌ NÃO podem visualizar histórico de outros pacientes
+- ✅ Podem visualizar **apenas seus** dados pessoais
+- ❌ NÃO podem listar todos os pacientes
+- ❌ NÃO podem criar, editar, ativar ou desativar pacientes
+
 ## 📚 API Endpoints
 
-### Agendamento Service
+### Agendamento Service (GraphQL)
 
-#### Pacientes
-```http
-GET    /api/pacientes           # Listar pacientes
-POST   /api/pacientes           # Criar paciente
-GET    /api/pacientes/{id}      # Buscar paciente
-PUT    /api/pacientes/{id}      # Atualizar paciente
-DELETE /api/pacientes/{id}      # Deletar paciente
+**Endpoint**: `POST http://localhost:8080/graphql`  
+**Interface**: `http://localhost:8080/graphiql`  
+**Autenticação**: HTTP Basic Auth obrigatória
+
+#### Queries (Leitura)
+```graphql
+# Pacientes
+query { pacientes { id nome cpf email } }                    # Médicos/Enfermeiros
+query { pacientesAtivos { id nome cpf } }                    # Médicos/Enfermeiros
+query { pacientePorId(id: 1) { id nome cpf } }              # Todos (com restrições)
+query { pacientePorCpf(cpf: "12345678901") { id nome } }    # Médicos/Enfermeiros
+query { pacientesPorNome(nome: "João") { id nome } }        # Médicos/Enfermeiros
+query { pacientesPorCidade(cidade: "São Paulo") { id nome } } # Médicos/Enfermeiros
+
+# Consultas
+query { consultasPorPaciente(pacienteId: 1) { id descricao } } # Todos (com restrições)
+query { proximasConsultas(pacienteId: 1) { id dataHora } }     # Todos (com restrições)
+query { consultaPorId(id: 1) { id descricao } }               # Todos (com restrições)
 ```
 
-#### Consultas
-```http
-GET    /api/consultas           # Listar consultas
-POST   /api/consultas           # Criar consulta
-GET    /api/consultas/{id}      # Buscar consulta
-PUT    /api/consultas/{id}      # Atualizar consulta
-DELETE /api/consultas/{id}      # Deletar consulta
+#### Mutations (Escrita)
+```graphql
+# Pacientes
+mutation { criarPaciente(input: { nome: "João", cpf: "12345678901" }) { id } }     # Médicos/Enfermeiros
+mutation { editarPaciente(id: 1, input: { nome: "João Silva" }) { id } }          # Médicos/Enfermeiros
+mutation { desativarPaciente(id: 1) }                                             # Médicos/Enfermeiros
+mutation { ativarPaciente(id: 1) }                                                # Médicos/Enfermeiros
+
+# Consultas
+mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: "2024-12-25T10:00:00", descricao: "Consulta" }) { id } } # Médicos/Enfermeiros
+mutation { editarConsulta(id: 1, input: { dataHora: "2024-12-25T14:00:00" }) { id } } # Médicos/Enfermeiros
+```
+
+### Histórico Service (GraphQL)
+
+**Endpoint**: `POST http://localhost:9092/graphql`  
+**Interface**: `http://localhost:9092/graphiql`  
+**Autenticação**: HTTP Basic Auth obrigatória
+
+#### Queries
+```graphql
+query { historicoPorPaciente(pacienteId: 1) { id evento timestamp } } # Médicos/Enfermeiros (qualquer paciente), Pacientes (apenas próprio)
 ```
 
 ### Notificação Service
@@ -148,36 +218,93 @@ GET /actuator/health            # Health check
 
 ## 🧪 Testes
 
-### Testar Agendamento Service
+### Testes com cURL
+
+#### 1. Teste como Médico (deve funcionar)
 ```bash
-# Verificar status
-curl http://localhost:9090/actuator/health
-
-# Criar paciente
-curl -X POST http://localhost:9090/api/pacientes \
+# Listar todos os pacientes
+curl -X POST http://localhost:8080/graphql \
+  -u medico1:password123 \
   -H "Content-Type: application/json" \
-  -d '{"nome":"João Silva","email":"joao@email.com","telefone":"11999999999"}'
+  -d '{"query":"{ pacientes { id nome cpf } }"}'
 
-# Criar consulta
-curl -X POST http://localhost:9090/api/consultas \
+# Registrar consulta
+curl -X POST http://localhost:8080/graphql \
+  -u medico1:password123 \
   -H "Content-Type: application/json" \
-  -d '{"pacienteId":1,"dataHora":"2025-10-15T10:00:00","observacoes":"Consulta de rotina"}'
+  -d '{"query":"mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: \"2024-12-25T10:00:00\", descricao: \"Consulta de rotina\" }) { id descricao } }"}'
 ```
 
-### Testar Notificação Service
+#### 2. Teste como Paciente (acesso restrito)
 ```bash
-# Verificar status
-curl http://localhost:9091/actuator/health
+# Ver suas próprias consultas (deve funcionar)
+curl -X POST http://localhost:8080/graphql \
+  -u 1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ consultasPorPaciente(pacienteId: 1) { id descricao } }"}'
 
-# Testar via RabbitMQ Management UI
+# Tentar listar todos os pacientes (deve falhar - 403 Forbidden)
+curl -X POST http://localhost:8080/graphql \
+  -u 1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ pacientes { id nome } }"}'
+```
+
+#### 3. Teste sem autenticação (deve falhar - 401 Unauthorized)
+```bash
+curl -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ pacientes { id nome } }"}'
+```
+
+#### 4. Teste de Histórico
+```bash
+# Médico vendo histórico de qualquer paciente (deve funcionar)
+curl -X POST http://localhost:9092/graphql \
+  -u medico1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ historicoPorPaciente(pacienteId: 1) { id evento } }"}'
+
+# Paciente vendo seu próprio histórico (deve funcionar)
+curl -X POST http://localhost:9092/graphql \
+  -u 1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ historicoPorPaciente(pacienteId: 1) { id evento } }"}'
+```
+
+### Testes com Postman
+
+1. **Importar Collection**: Use o arquivo `FIAP 24 - Tech Challenge 3.postman_collection.json`
+2. **Executar Testes**: A collection inclui testes organizados por tipo de usuário
+3. **Verificar Resultados**: 
+   - Médicos/Enfermeiros: 200 OK
+   - Pacientes (dados próprios): 200 OK
+   - Pacientes (dados de outros): 403 Forbidden
+   - Sem autenticação: 401 Unauthorized
+
+### Testes com GraphiQL
+
+1. **Agendamento**: http://localhost:8080/graphiql
+2. **Histórico**: http://localhost:9092/graphiql
+3. **Autenticação**: Use Basic Auth com os usuários de teste
+
+### Health Checks
+```bash
+# Verificar status dos serviços
+curl http://localhost:8080/actuator/health  # Agendamento
+curl http://localhost:9091/actuator/health  # Notificação
+curl http://localhost:9092/actuator/health  # Histórico
+
+# RabbitMQ Management UI
 # Acesse: http://localhost:15672 (admin/admin123)
 ```
 
 ## 📊 Monitoramento
 
 ### Health Checks
-- **Agendamento**: http://localhost:9090/actuator/health
+- **Agendamento**: http://localhost:8080/actuator/health
 - **Notificação**: http://localhost:9091/actuator/health
+- **Histórico**: http://localhost:9092/actuator/health
 - **RabbitMQ**: http://localhost:15672
 
 ### Logs
@@ -188,6 +315,7 @@ docker-compose logs -f
 # Ver logs de um serviço específico
 docker-compose logs -f agendamento-service
 docker-compose logs -f notificacao-service
+docker-compose logs -f historico-service
 ```
 
 ## 🔄 Fluxo de Notificações

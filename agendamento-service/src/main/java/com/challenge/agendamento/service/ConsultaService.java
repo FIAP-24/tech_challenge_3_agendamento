@@ -3,9 +3,10 @@ package com.challenge.agendamento.service;
 import com.challenge.agendamento.dto.NotificacaoDTO;
 import com.challenge.agendamento.model.Consulta;
 import com.challenge.agendamento.repository.ConsultaRepository;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -27,10 +28,16 @@ public class ConsultaService {
     private RabbitTemplate rabbitTemplate;
 
     @Autowired(required = false)
-    private Queue queue;
+    private TopicExchange exchange;
+
+    @Value("${rabbitmq.routing.key:notificacao.consulta}")
+    private String routingKey;
 
     @Autowired
     private PacienteService pacienteService;
+
+    @Autowired
+    private MedicoService medicoService;
 
     @Transactional
     public Consulta registrarConsulta(Consulta consulta) {
@@ -40,8 +47,17 @@ public class ConsultaService {
             throw new IllegalArgumentException("Paciente não encontrado ou inativo: " + consulta.getPacienteId());
         }
 
+        if (!medicoService.medicoExisteEAtivo(consulta.getMedicoId())) {
+            throw new IllegalArgumentException("Médico não encontrado ou inativo: " + consulta.getMedicoId());
+        }
+
         if (consulta.getDataHora().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Data da consulta deve ser futura");
+        }
+
+        // Validar conflito de horário para o médico
+        if (consultaRepository.existsByMedicoIdAndDataHora(consulta.getMedicoId(), consulta.getDataHora())) {
+            throw new IllegalArgumentException("Médico já possui consulta agendada neste horário: " + consulta.getDataHora());
         }
 
         Consulta savedConsulta = consultaRepository.save(consulta);
@@ -72,19 +88,49 @@ public class ConsultaService {
         return consultaRepository.findByPacienteIdAndDataHoraAfter(pacienteId, LocalDateTime.now());
     }
 
+    public List<Consulta> findConsultasByMedicoId(Long medicoId) {
+        return consultaRepository.findByMedicoId(medicoId);
+    }
+
+    public List<Consulta> findProximasConsultasByMedicoId(Long medicoId) {
+        return consultaRepository.findByMedicoIdAndDataHoraAfter(medicoId, LocalDateTime.now());
+    }
+
+    public List<Consulta> findConsultasByMedicoIdAndPeriodo(Long medicoId, LocalDateTime inicio, LocalDateTime fim) {
+        return consultaRepository.findByMedicoIdAndDataHoraBetween(medicoId, inicio, fim);
+    }
+
     public Optional<Consulta> findById(Long id) {
         return consultaRepository.findById(id);
     }
 
+    @Transactional
+    public Boolean cancelarConsulta(Long id) {
+        log.info("Cancelando consulta ID: {}", id);
+        
+        return consultaRepository.findById(id).map(consulta -> {
+            if (consulta.getDataHora().isBefore(LocalDateTime.now())) {
+                throw new IllegalArgumentException("Não é possível cancelar uma consulta já realizada");
+            }
+            
+            consultaRepository.delete(consulta);
+            enviarParaHistorico("CANCELAMENTO_CONSULTA", consulta);
+            
+            log.info("Consulta ID: {} cancelada com sucesso.", id);
+            return true;
+        }).orElseThrow(() -> new IllegalArgumentException("Consulta não encontrada: " + id));
+    }
+
     private void enviarNotificacao(String mensagem, Consulta consulta) {
-        if (rabbitTemplate != null && queue != null) {
+        if (rabbitTemplate != null && exchange != null) {
             NotificacaoDTO notificacao = new NotificacaoDTO(
                     consulta.getId(),
                     consulta.getPacienteId(),
                     mensagem + " Para o dia: " + consulta.getDataHora().toString()
             );
-            rabbitTemplate.convertAndSend(queue.getName(), notificacao);
-            log.info("Notificação enviada via RabbitMQ para paciente ID: {}", consulta.getPacienteId());
+            rabbitTemplate.convertAndSend(exchange.getName(), routingKey, notificacao);
+            log.info("Notificação enviada via RabbitMQ para paciente ID: {} - Exchange: {}, Routing Key: {}", 
+                    consulta.getPacienteId(), exchange.getName(), routingKey);
         } else {
             log.warn("RabbitMQ não configurado - notificação não enviada para paciente ID: {}", consulta.getPacienteId());
         }

@@ -28,13 +28,11 @@ public class ConsultaController {
     private ConsultaService consultaService;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    // Métodos de Query (leitura)
     @QueryMapping
-    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')") // Acesso controlado [cite: 16, 17, 18]
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO', 'PACIENTE')")
     public List<Consulta> consultasPorPaciente(@Argument Long pacienteId) {
         log.info("Buscando consultas para paciente ID: {}", pacienteId);
 
-        // Lógica de autorização para garantir que um paciente só veja suas consultas
         verificarAutorizacaoPaciente(pacienteId);
 
         return consultaService.findConsultasByPacienteId(pacienteId);
@@ -45,7 +43,6 @@ public class ConsultaController {
     public List<Consulta> proximasConsultas(@Argument Long pacienteId) {
         log.info("Buscando próximas consultas para paciente ID: {}", pacienteId);
 
-        // Lógica de autorização
         verificarAutorizacaoPaciente(pacienteId);
 
         return consultaService.findProximasConsultasByPacienteId(pacienteId);
@@ -58,15 +55,38 @@ public class ConsultaController {
         Consulta consulta = consultaService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
 
-        // Lógica de autorização
         verificarAutorizacaoPaciente(consulta.getPacienteId());
 
         return consulta;
     }
 
-    // Métodos de Mutation (escrita)
+    @QueryMapping
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
+    public List<Consulta> consultasPorMedico(@Argument Long medicoId) {
+        log.info("Buscando consultas para médico ID: {}", medicoId);
+        return consultaService.findConsultasByMedicoId(medicoId);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
+    public List<Consulta> proximasConsultasMedico(@Argument Long medicoId) {
+        log.info("Buscando próximas consultas para médico ID: {}", medicoId);
+        return consultaService.findProximasConsultasByMedicoId(medicoId);
+    }
+
+    @QueryMapping
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
+    public List<Consulta> consultasMedicoPorPeriodo(@Argument Long medicoId, @Argument String dataInicio, @Argument String dataFim) {
+        log.info("Buscando consultas do médico ID: {} entre {} e {}", medicoId, dataInicio, dataFim);
+        
+        LocalDateTime inicio = LocalDateTime.parse(dataInicio, formatter);
+        LocalDateTime fim = LocalDateTime.parse(dataFim, formatter);
+        
+        return consultaService.findConsultasByMedicoIdAndPeriodo(medicoId, inicio, fim);
+    }
+
     @MutationMapping
-    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')") // Apenas médicos e enfermeiros podem registrar [cite: 21]
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
     public Consulta registrarConsulta(@Argument ConsultaInput input) {
         log.info("Registrando nova consulta para paciente ID: {}", input.pacienteId());
         Consulta consulta = new Consulta();
@@ -86,6 +106,13 @@ public class ConsultaController {
         consultaAtualizada.setDescricao(input.descricao());
         return consultaService.editarConsulta(id, consultaAtualizada)
                 .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
+    }
+
+    @MutationMapping
+    @PreAuthorize("hasAnyRole('MEDICO', 'ENFERMEIRO')")
+    public Boolean cancelarConsulta(@Argument Long id) {
+        log.info("Cancelando consulta ID: {}", id);
+        return consultaService.cancelarConsulta(id);
     }
 
     /**

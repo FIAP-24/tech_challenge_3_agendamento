@@ -1,9 +1,15 @@
-FROM openjdk:21-jdk-slim
+# Construindo pacote
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
+# Criando imagem jdk 21 slim
+FROM openjdk:21-slim
 WORKDIR /app
 
-# Copiar o arquivo JAR
-COPY target/historico-service-*.jar app.jar
+# Copiando o JAR que foi criado no builder stage
+COPY --from=builder /app/target/*.jar app.jar
 
 # Expor a porta
 EXPOSE 9092
