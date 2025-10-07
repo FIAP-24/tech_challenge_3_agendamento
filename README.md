@@ -26,8 +26,8 @@ Sistema de microserviços para agendamento de consultas médicas com notificaç�
 
 ## 🚀 Serviços
 
-### 1. Agendamento Service (Porta 8080)
-- **Funcionalidades**: CRUD de pacientes e consultas via GraphQL
+### 1. Agendamento Service (Porta 9090)
+- **Funcionalidades**: CRUD de pacientes, médicos e consultas via GraphQL
 - **Segurança**: Autenticação HTTP Basic + controle de acesso por roles
 - **Banco**: H2 em memória (desenvolvimento)
 - **Integração**: Envia notificações via RabbitMQ
@@ -113,7 +113,7 @@ SMTP_PASSWORD=sua_senha_app
 
 ### Portas dos Serviços
 
-- **Agendamento Service**: http://localhost:8080
+- **Agendamento Service**: http://localhost:9090
 - **Notificação Service**: http://localhost:9091
 - **Histórico Service**: http://localhost:9092
 - **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
@@ -139,16 +139,22 @@ Todos os usuários usam a senha: `password123`
 - ✅ Podem visualizar **todas** as consultas
 - ✅ Podem **registrar** novas consultas
 - ✅ Podem **editar** consultas existentes
+- ✅ Podem **cancelar** consultas
+- ✅ Podem visualizar **consultas por médico**
 - ✅ Podem visualizar **todo** o histórico de qualquer paciente
 - ✅ Podem **criar**, **editar**, **ativar** e **desativar** pacientes
+- ✅ Podem **criar**, **editar**, **ativar** e **desativar** médicos
 
 #### **Enfermeiros (ROLE_ENFERMEIRO)**
 - ✅ Podem visualizar **todos** os pacientes
 - ✅ Podem visualizar **todas** as consultas
 - ✅ Podem **registrar** novas consultas
 - ✅ Podem **editar** consultas existentes
+- ✅ Podem **cancelar** consultas
+- ✅ Podem visualizar **consultas por médico**
 - ✅ Podem visualizar **todo** o histórico de qualquer paciente
 - ✅ Podem **criar**, **editar**, **ativar** e **desativar** pacientes
+- ✅ Podem **criar**, **editar**, **ativar** e **desativar** médicos
 
 #### **Pacientes (ROLE_PACIENTE)**
 - ✅ Podem visualizar **apenas suas** consultas
@@ -164,8 +170,8 @@ Todos os usuários usam a senha: `password123`
 
 ### Agendamento Service (GraphQL)
 
-**Endpoint**: `POST http://localhost:8080/graphql`  
-**Interface**: `http://localhost:8080/graphiql`  
+**Endpoint**: `POST http://localhost:9090/graphql`  
+**Interface**: `http://localhost:9090/graphiql`  
 **Autenticação**: HTTP Basic Auth obrigatória
 
 #### Queries (Leitura)
@@ -179,9 +185,22 @@ query { pacientesPorNome(nome: "João") { id nome } }        # Médicos/Enfermei
 query { pacientesPorCidade(cidade: "São Paulo") { id nome } } # Médicos/Enfermeiros
 
 # Consultas
-query { consultasPorPaciente(pacienteId: 1) { id descricao } } # Todos (com restrições)
-query { proximasConsultas(pacienteId: 1) { id dataHora } }     # Todos (com restrições)
-query { consultaPorId(id: 1) { id descricao } }               # Todos (com restrições)
+query { consultasPorPaciente(pacienteId: 1) { id descricao } }           # Todos (com restrições)
+query { proximasConsultas(pacienteId: 1) { id dataHora } }               # Todos (com restrições)
+query { consultaPorId(id: 1) { id descricao } }                         # Todos (com restrições)
+query { consultasPorMedico(medicoId: 1) { id descricao } }              # Médicos/Enfermeiros
+query { proximasConsultasMedico(medicoId: 1) { id dataHora } }          # Médicos/Enfermeiros
+query { consultasMedicoPorPeriodo(medicoId: 1, dataInicio: "2024-01-01", dataFim: "2024-12-31") { id } } # Médicos/Enfermeiros
+
+# Médicos
+query { medicos { id nome crm especialidade } }                           # Médicos/Enfermeiros
+query { medicosAtivos { id nome crm especialidade } }                     # Médicos/Enfermeiros
+query { medicoPorId(id: 1) { id nome crm especialidade } }               # Médicos/Enfermeiros
+query { medicoPorCrm(crm: "123456") { id nome especialidade } }          # Médicos/Enfermeiros
+query { medicosPorEspecialidade(especialidade: "Cardiologia") { id nome } } # Médicos/Enfermeiros
+query { medicosAtivosPorEspecialidade(especialidade: "Cardiologia") { id nome } } # Médicos/Enfermeiros
+query { medicosPorNome(nome: "Dr. João") { id nome crm } }               # Médicos/Enfermeiros
+query { medicosAtivosPorNome(nome: "Dr. João") { id nome crm } }         # Médicos/Enfermeiros
 ```
 
 #### Mutations (Escrita)
@@ -195,6 +214,13 @@ mutation { ativarPaciente(id: 1) }                                              
 # Consultas
 mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: "2024-12-25T10:00:00", descricao: "Consulta" }) { id } } # Médicos/Enfermeiros
 mutation { editarConsulta(id: 1, input: { dataHora: "2024-12-25T14:00:00" }) { id } } # Médicos/Enfermeiros
+mutation { cancelarConsulta(id: 1) } # Médicos/Enfermeiros
+
+# Médicos
+mutation { criarMedico(input: { nome: "Dr. João", crm: "123456", especialidade: "Cardiologia", email: "joao@email.com" }) { id } } # Médicos/Enfermeiros
+mutation { editarMedico(id: 1, input: { nome: "Dr. João Silva", email: "joao.silva@email.com" }) { id } } # Médicos/Enfermeiros
+mutation { desativarMedico(id: 1) } # Médicos/Enfermeiros
+mutation { ativarMedico(id: 1) } # Médicos/Enfermeiros
 ```
 
 ### Histórico Service (GraphQL)
@@ -206,6 +232,85 @@ mutation { editarConsulta(id: 1, input: { dataHora: "2024-12-25T14:00:00" }) { i
 #### Queries
 ```graphql
 query { historicoPorPaciente(pacienteId: 1) { id evento timestamp } } # Médicos/Enfermeiros (qualquer paciente), Pacientes (apenas próprio)
+```
+
+### Tipos GraphQL
+
+#### Consulta
+```graphql
+type Consulta {
+    id: ID
+    pacienteId: ID
+    medicoId: ID
+    dataHora: String
+    descricao: String
+}
+```
+
+#### Paciente
+```graphql
+type Paciente {
+    id: ID
+    nome: String
+    cpf: String
+    email: String
+    telefone: String
+    dataNascimento: String
+    endereco: String
+    cidade: String
+    estado: String
+    cep: String
+    ativo: Boolean
+    dataCriacao: String
+    dataAtualizacao: String
+}
+```
+
+#### Médico
+```graphql
+type Medico {
+    id: ID
+    nome: String
+    crm: String
+    especialidade: String
+    email: String
+    telefone: String
+    ativo: Boolean
+    dataCriacao: String
+    dataAtualizacao: String
+}
+```
+
+#### Inputs
+```graphql
+input ConsultaInput {
+    pacienteId: ID!
+    medicoId: ID!
+    dataHora: String!
+    descricao: String
+}
+
+input PacienteInput {
+    nome: String!
+    cpf: String!
+    email: String
+    telefone: String
+    dataNascimento: String!
+    endereco: String
+    cidade: String
+    estado: String
+    cep: String
+    ativo: Boolean
+}
+
+input MedicoInput {
+    nome: String!
+    crm: String!
+    especialidade: String!
+    email: String
+    telefone: String
+    ativo: Boolean
+}
 ```
 
 ### Notificação Service
@@ -223,28 +328,40 @@ GET /actuator/health            # Health check
 #### 1. Teste como Médico (deve funcionar)
 ```bash
 # Listar todos os pacientes
-curl -X POST http://localhost:8080/graphql \
+curl -X POST http://localhost:9090/graphql \
   -u medico1:password123 \
   -H "Content-Type: application/json" \
   -d '{"query":"{ pacientes { id nome cpf } }"}'
 
 # Registrar consulta
-curl -X POST http://localhost:8080/graphql \
+curl -X POST http://localhost:9090/graphql \
   -u medico1:password123 \
   -H "Content-Type: application/json" \
   -d '{"query":"mutation { registrarConsulta(input: { pacienteId: 1, medicoId: 1, dataHora: \"2024-12-25T10:00:00\", descricao: \"Consulta de rotina\" }) { id descricao } }"}'
+
+# Listar médicos
+curl -X POST http://localhost:9090/graphql \
+  -u medico1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ medicos { id nome crm especialidade } }"}'
+
+# Consultas por médico
+curl -X POST http://localhost:9090/graphql \
+  -u medico1:password123 \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ consultasPorMedico(medicoId: 1) { id descricao dataHora } }"}'
 ```
 
 #### 2. Teste como Paciente (acesso restrito)
 ```bash
 # Ver suas próprias consultas (deve funcionar)
-curl -X POST http://localhost:8080/graphql \
+curl -X POST http://localhost:9090/graphql \
   -u 1:password123 \
   -H "Content-Type: application/json" \
   -d '{"query":"{ consultasPorPaciente(pacienteId: 1) { id descricao } }"}'
 
 # Tentar listar todos os pacientes (deve falhar - 403 Forbidden)
-curl -X POST http://localhost:8080/graphql \
+curl -X POST http://localhost:9090/graphql \
   -u 1:password123 \
   -H "Content-Type: application/json" \
   -d '{"query":"{ pacientes { id nome } }"}'
@@ -252,7 +369,7 @@ curl -X POST http://localhost:8080/graphql \
 
 #### 3. Teste sem autenticação (deve falhar - 401 Unauthorized)
 ```bash
-curl -X POST http://localhost:8080/graphql \
+curl -X POST http://localhost:9090/graphql \
   -H "Content-Type: application/json" \
   -d '{"query":"{ pacientes { id nome } }"}'
 ```
@@ -275,7 +392,13 @@ curl -X POST http://localhost:9092/graphql \
 ### Testes com Postman
 
 1. **Importar Collection**: Use o arquivo `FIAP 24 - Tech Challenge 3.postman_collection.json`
-2. **Executar Testes**: A collection inclui testes organizados por tipo de usuário
+2. **Executar Testes**: A collection inclui testes organizados por tipo de usuário e funcionalidade:
+   - **Autenticação**: Testes de login para cada role
+   - **Pacientes**: CRUD completo
+   - **Médicos**: CRUD completo
+   - **Consultas**: CRUD + cancelamento + consultas por médico
+   - **Histórico**: Consultas de auditoria
+   - **Segurança**: Testes de autorização
 3. **Verificar Resultados**: 
    - Médicos/Enfermeiros: 200 OK
    - Pacientes (dados próprios): 200 OK
@@ -284,14 +407,14 @@ curl -X POST http://localhost:9092/graphql \
 
 ### Testes com GraphiQL
 
-1. **Agendamento**: http://localhost:8080/graphiql
+1. **Agendamento**: http://localhost:9090/graphiql
 2. **Histórico**: http://localhost:9092/graphiql
 3. **Autenticação**: Use Basic Auth com os usuários de teste
 
 ### Health Checks
 ```bash
 # Verificar status dos serviços
-curl http://localhost:8080/actuator/health  # Agendamento
+curl http://localhost:9090/actuator/health  # Agendamento
 curl http://localhost:9091/actuator/health  # Notificação
 curl http://localhost:9092/actuator/health  # Histórico
 
@@ -302,7 +425,7 @@ curl http://localhost:9092/actuator/health  # Histórico
 ## 📊 Monitoramento
 
 ### Health Checks
-- **Agendamento**: http://localhost:8080/actuator/health
+- **Agendamento**: http://localhost:9090/actuator/health
 - **Notificação**: http://localhost:9091/actuator/health
 - **Histórico**: http://localhost:9092/actuator/health
 - **RabbitMQ**: http://localhost:15672
